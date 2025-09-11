@@ -2,5 +2,6 @@ name: chargym
 channels:
   - conda-forge
 dependencies:
-  - gym
-  - stable_baselines3
+  - stable_baselines3=1.4.0
+
+  - torch=1.12.0+cu116
