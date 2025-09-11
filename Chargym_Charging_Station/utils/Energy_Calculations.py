@@ -3,11 +3,15 @@ import scipy.io
 
 def Energy_Calculation(self):
     days_of_experiment = self.number_of_days
-    current_folder = self.current_folder
+    # Use pathlib.Path provided by the environment to locate data files
+    # self.files_dir must be a pathlib.Path created in the environment class
+    files_dir = self.files_dir
     price_flag = self.price_flag
     solar_flag = self.solar_flag
 
-    contents=scipy.io.loadmat(current_folder+'Weather.mat')
+    # Build the path using pathlib and pass a string to scipy.loadmat
+    weather_path = str(files_dir / 'Weather.mat')
+    contents = scipy.io.loadmat(weather_path)
     x_forecast = contents['mydata']
 
 

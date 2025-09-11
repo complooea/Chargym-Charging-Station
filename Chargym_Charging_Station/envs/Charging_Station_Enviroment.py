@@ -47,8 +47,8 @@ class ChargingEnv(gym.Env):
 
         self.PV_Param = {'PV_Surface': PV_Surface, 'PV_effic': PV_effic}
 
-        # self.current_folder = os.getcwd() + '\\utils\\Files\\'
-        self.current_folder = os.path.realpath(os.path.join(os.path.dirname(__file__), '..')) + '\\Files\\'
+        # Use pathlib to build a portable path to the Files directory
+        self.files_dir = pathlib.Path(__file__).resolve().parent.parent / "Files"
 
         low = np.array(np.zeros(8+2*self.number_of_cars), dtype=np.float32)
         high = np.array(np.ones(8+2*self.number_of_cars), dtype=np.float32)
@@ -81,7 +81,7 @@ class ChargingEnv(gym.Env):
             Results = {'BOC': self.BOC, 'Grid_Final': self.Grid_Evol, 'RES_wasted' :self.Res_wasted_evol,
                        'Penalty_Evol':self.Penalty_Evol,
                        'Renewable': self.Energy['Renewable'],'Cost_History': self.Cost_History}
-            savemat(self.current_folder + '\Results.mat', {'Results': Results})
+            savemat(str(self.files_dir / 'Results.mat'), {'Results': Results})
 
         self.info = {}
         return conditions, -reward, self.done, self.info
@@ -97,9 +97,9 @@ class ChargingEnv(gym.Env):
             [BOC, ArrivalT, DepartureT, evolution_of_cars, present_cars] = Init_Values.InitialValues_per_day(self)
             self.Invalues = {'BOC': BOC, 'ArrivalT': ArrivalT, 'evolution_of_cars': evolution_of_cars,
                              'DepartureT': DepartureT, 'present_cars': present_cars}
-            savemat(self.current_folder + '\Initial_Values.mat', self.Invalues)
+            savemat(str(self.files_dir / 'Initial_Values.mat'), self.Invalues)
         else:
-            contents = loadmat(self.current_folder + '\Initial_Values.mat')
+            contents = loadmat(str(self.files_dir / 'Initial_Values.mat'))
             self.Invalues = {'BOC': contents['BOC'], 'Arrival': contents['ArrivalT'][0],
                              'evolution_of_cars': contents['evolution_of_cars'], 'Departure': contents['DepartureT'][0],
                              'present_cars': contents['present_cars'], 'ArrivalT': [], 'DepartureT': []}
