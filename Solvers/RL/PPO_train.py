@@ -41,7 +41,7 @@ for i in range(1, 50):
 
 
 
-env.close
+env.close()
 #del model # remove to demonstrate saving and loading
 
 # model = DDPG.load("ddpg_Chargym", env=env)
