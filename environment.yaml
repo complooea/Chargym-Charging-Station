@@ -1,8 +1,0 @@
-name: chargym
-channels:
-  - conda-forge
-dependencies:
-  - stable_baselines3=1.4.0
-  - tensorboard
-
-  - torch=1.12.0+cu116
