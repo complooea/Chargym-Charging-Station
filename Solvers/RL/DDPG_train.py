@@ -1,66 +1,91 @@
-import gym
-import Chargym_Charging_Station
+import os
+import time
 import argparse
 
-import numpy
-from stable_baselines3 import DDPG
-from stable_baselines3.common.noise import NormalActionNoise
 import gym
 import numpy as np
-import os
+import torch
 
+import Chargym_Charging_Station  # noqa: F401 - required to register the env
+from stable_baselines3 import DDPG
 from stable_baselines3.ddpg.policies import MlpPolicy
-from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
-from stable_baselines3 import DDPG, PPO
-from stable_baselines3.common.evaluation import evaluate_policy
-import time
-models_dir = f"models/DDPG-{int(time.time())}"
-logdir = f"logs/DDPG-{int(time.time())}"
-
-if not os.path.exists(models_dir):
-    os.makedirs(models_dir)
-
-if not os.path.exists(logdir):
-    os.makedirs(logdir)
+from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
+from stable_baselines3.common.utils import set_random_seed
 
 
-env = gym.make('ChargingEnv-v0')
-from stable_baselines3.common.env_checker import check_env
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=0, help="Random seed for reproducibility")
+    parser.add_argument("--timesteps", type=int, default=20000, help="Timesteps per training chunk")
+    parser.add_argument("--iters", type=int, default=50, help="Number of chunks to train for")
+    parser.add_argument("--tensorboard-tag", type=str, default=None, help="Custom TB run name")
+    parser.add_argument(
+        "--no-cudnn-deterministic",
+        action="store_true",
+        help="Skip cuDNN deterministic settings (faster but less reproducible)",
+    )
+    parser.add_argument(
+        "--check-env",
+        action="store_true",
+        help="Run gym check_env (consumes RNG; use only for debugging)",
+    )
+    args = parser.parse_args()
 
-# It will check your custom environment and output additional warnings if needed
-check_env(env)
-# the noise objects for DDPG
-n_actions = env.action_space.shape[-1]
-param_noise = None
-action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=float(0.5) * np.ones(n_actions))
+    seed = args.seed
+    run_ts = int(time.time())
+    run_name = f"seed-{seed}/{run_ts}"
 
-model = DDPG(MlpPolicy, env, verbose=1, action_noise=action_noise, tensorboard_log=logdir)
+    models_dir = os.path.join("models", "DDPG", run_name)
+    logdir = os.path.join("logs", "DDPG", run_name)
+    os.makedirs(models_dir, exist_ok=True)
+    os.makedirs(logdir, exist_ok=True)
 
-# model.learn(total_timesteps=2000000, reset_num_timesteps=False, tb_log_name="DDPG")
-# model.save(f"{models_dir}/{2000000}")
+    # Seed global RNGs used by SB3 and PyTorch
+    set_random_seed(seed)
+    if not args.no_cudnn_deterministic:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
-#This will save every 20000 steps the models
-TIMESTEPS = 20000
-for i in range(1, 50):
-    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="DDPG")
-    model.save(f"{models_dir}/{TIMESTEPS * i}")
+    # Create and seed the environment BEFORE any reset/step/check
+    env = gym.make("ChargingEnv-v0")
+    env.seed(seed)
+    try:
+        env.action_space.seed(seed)
+    except Exception:
+        pass
+    try:
+        env.observation_space.seed(seed)
+    except Exception:
+        pass
+
+    if args.check_env:
+        from stable_baselines3.common.env_checker import check_env
+        check_env(env)
+
+    # OU action noise (uses NumPy RNG; set_random_seed covers it)
+    n_actions = env.action_space.shape[-1]
+    action_noise = OrnsteinUhlenbeckActionNoise(
+        mean=np.zeros(n_actions),
+        sigma=float(0.5) * np.ones(n_actions),
+    )
+
+    model = DDPG(
+        MlpPolicy,
+        env,
+        verbose=1,
+        seed=seed,
+        action_noise=action_noise,
+        tensorboard_log=logdir,
+    )
+
+    tb_tag = args.tensorboard_tag or f"DDPG_s{seed}"
+    timesteps = args.timesteps
+    for i in range(1, args.iters + 1):
+        model.learn(total_timesteps=timesteps, reset_num_timesteps=False, tb_log_name=tb_tag)
+        model.save(os.path.join(models_dir, f"{timesteps * i}"))
+
+    env.close()
 
 
-
-env.close()
-#del model # remove to demonstrate saving and loading
-
-# model = DDPG.load("ddpg_Chargym", env=env)
-#
-# mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=10)
-#
-# # Enjoy trained agent
-# obs = env.reset()
-# for i in range(24):
-#     action, _states = model.predict(obs, deterministic=True)
-#     obs, rewards, dones, info = env.step(action)
-#     # env.render(
-
-
-
-#aaaaa=1
+if __name__ == "__main__":
+    main()
