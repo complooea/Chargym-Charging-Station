@@ -1,5 +1,4 @@
 import numpy as np
-from numpy import random
 import scipy.io
 
 
@@ -21,14 +20,15 @@ def InitialValues_per_day(self):
         for hour in range(24):
 
             if present == 0:
-                arrival=round(random.rand()-0.1)
+                # Use environment-scoped RNG for reproducibility
+                arrival = round(self.np_random.rand() - 0.1)
                 if arrival==1 and hour<=20:
-                    ran = random.randint(20, 50)
+                    ran = self.np_random.randint(20, 50)
                     BOC[car, hour] = ran / 100
                     pointer=pointer+1
                     Arrival_car.append(hour)
                     upper_limit=min(hour + 10, 25)
-                    Departure_car.append(random.randint(hour+4,int(upper_limit)))
+                    Departure_car.append(self.np_random.randint(hour + 4, int(upper_limit)))
 
 
 
