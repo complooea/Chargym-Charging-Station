@@ -63,7 +63,8 @@ class ChargingEnv(gym.Env):
             dtype=np.float32
         )
 
-        self.seed
+        # initialize RNG for the environment
+        self.seed()
 
     def step(self, actions):
 
