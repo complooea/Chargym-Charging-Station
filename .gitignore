@@ -4,6 +4,10 @@
 logs/
 models/
 
+# Ignore tarball archives
+*.tar.gz
+*.tgz
+
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,macos,visualstudiocode,python,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,linux,macos,visualstudiocode,python,jupyternotebooks
 
