@@ -1,3 +1,9 @@
+# Custom
+
+# Ignore runtime artifacts: logs and trained models
+logs/
+models/
+
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,macos,visualstudiocode,python,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,linux,macos,visualstudiocode,python,jupyternotebooks
 
