@@ -17,6 +17,11 @@ import Chargym_Charging_Station  # noqa: F401
 from stable_baselines3 import DDPG
 from Solvers.RBC.RBC import RBC
 
+plt.rcParams.update({
+	"font.family": "serif",
+	"font.serif": ["Times New Roman"],
+	"font.size": 8,
+})
 
 def find_ddpg_model_paths(models_root: str) -> list:
 	"""
@@ -156,19 +161,30 @@ def main():
 
 	x = np.arange(1, episodes + 1)
 
-	# Plot DDPG bands and median
-	plt.rcParams.update({"font.size": 16})
-	plt.figure(figsize=(10, 6))
-	plt.fill_between(x, ymin, ymax, color="#1f77b4", alpha=0.15, label="DDPG min–max")
-	plt.fill_between(x, q25, q75, color="#1f77b4", alpha=0.30, label="DDPG 25–75%")
-	plt.plot(x, median, color="#1f77b4", linewidth=2.0, label="DDPG median")
+	# Figure size: width = 3.487 inches, height = width * 0.5
+	_width_in = 3.487
+	_height_in = _width_in * 0.75
+	plt.figure(figsize=(_width_in, _height_in))
+	plt.fill_between(x, ymin, ymax, color="#f74d4d", edgecolor='none', alpha=0.16, label="DDPG min–max")
+	plt.fill_between(x, q25, q75, color="#f74d4d", edgecolor='none', alpha=0.40, label="DDPG 25–75%")
+	plt.plot(x, median, color="#f74d4d", linewidth=0.5, label="DDPG median")
 
 	# Plot RBC
-	plt.plot(x, rbc_rewards, color="#ff7f0e", linewidth=2.0, label="RBC")
+	plt.plot(x, rbc_rewards, color="#41b7ac", linewidth=0.5, label="RBC")
 
 	plt.xlabel("Evaluation episodes")
 	plt.ylabel("Reward")
-	plt.legend()
+	# Legend above plot, two columns (so 2x2 layout for 4 items)
+	plt.legend(
+		loc="upper center",
+		bbox_to_anchor=(0.5, 1.3),
+		ncol=2,
+		frameon=True,
+		fontsize=8,
+		columnspacing=1.0,
+		handlelength=1.5,
+		borderaxespad=0.2,
+	)
 	plt.tight_layout()
 
 	# Save figure
