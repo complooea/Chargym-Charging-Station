@@ -9,6 +9,8 @@ from Solvers.RBC.RBC import RBC
 
 from stable_baselines3 import DDPG, PPO
 import time
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
@@ -19,11 +21,11 @@ parser.add_argument("--reset_flag", default=1, type=int)
 args = parser.parse_args()
 env = gym.make(args.env)
 #Define which model to load
-models_dir1="models/DDPG-1646748022"
+models_dir1="models/DDPG/seed-0/1757851064"
 model_path1=f"{models_dir1}/940000.zip"
 model1 = DDPG.load(model_path1, env=env)
 
-models_dir2="models/PPO-1646764100"
+models_dir2="models/PPO/seed-0/1757948678"
 model_path2=f"{models_dir2}/940000.zip"
 model2 = PPO.load(model_path2, env=env)
 
@@ -75,7 +77,7 @@ for ep in range(episodes):
         # obs = next_state_rbc
         rewards_list_rbc.append(rewards_rbc)
     final_reward_rbc[ep] = sum(rewards_list_rbc)
-env.close
+env.close()
 
 Mean_reward_DDPG=np.mean(final_reward_DDPG)
 Mean_reward_PPO=np.mean(final_reward_PPO)
@@ -89,7 +91,11 @@ plt.xlabel('Evaluation episodes')
 plt.ylabel('Reward')
 plt.legend(['DDPG', 'PPO', 'RBC'])
 
-plt.show()
+# Save plot as PDF instead of showing (headless-friendly)
+os.makedirs('plots', exist_ok=True)
+plt.tight_layout()
+plt.savefig(os.path.join('plots', 'evaluation_rewards.pdf'), format='pdf', bbox_inches='tight')
+plt.close()
 
 a=1
 
