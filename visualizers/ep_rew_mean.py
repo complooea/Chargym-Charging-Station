@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 
 import numpy as np
 import matplotlib
@@ -8,6 +8,15 @@ import matplotlib
 # Use non-interactive backend by default (safe for headless servers)
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+
+# Global Matplotlib font configuration
+# Note: Times New Roman must be installed on the system to take effect.
+# You can add fallbacks after it if needed (e.g., "DejaVu Serif").
+plt.rcParams.update({
+	"font.family": "serif",
+	"font.serif": ["Times New Roman"],
+	"font.size": 8,
+})
 
 try:
 	from tensorboard.backend.event_processing import event_accumulator
@@ -25,7 +34,7 @@ def find_run_dirs(logs_dir: str) -> List[str]:
 	return sorted(set(run_dirs))
 
 
-def resolve_tag(ea: "event_accumulator.EventAccumulator", preferred: str) -> Optional[str]:
+def resolve_tag(ea: Any, preferred: str) -> Optional[str]:
 	"""Find the scalar tag to use.
 
 	Tries exact match first. If not found, tries to find a tag that contains the
@@ -123,24 +132,26 @@ def plot_bands(
 	output: Optional[str],
 	show: bool,
 ):
-	plt.figure(figsize=(10, 6))
+	# Figure size: width = 3.487 inches, height = width * 0.5
+	_width_in = 3.487
+	_height_in = _width_in * 0.5
+	plt.figure(figsize=(_width_in, _height_in))
 	# Min-Max band
-	plt.fill_between(grid, data_min, data_max, color="#91c9f7", alpha=0.25, label="min–max")
+	plt.fill_between(grid, data_min, data_max, color="#0c84c6", edgecolor='none', alpha=0.16, label="min–max")
 	# IQR band
-	plt.fill_between(grid, q1, q3, color="#1f77b4", alpha=0.25, label="25–75%")
+	plt.fill_between(grid, q1, q3, color="#0c84c6", edgecolor='none', alpha=0.4, label="25–75%")
 	# Median line
-	plt.plot(grid, median, color="#1f77b4", linewidth=2.0, label="median")
+	plt.plot(grid, median, color="#0c84c6", linewidth=0.5, label="median")
 
 	plt.xlabel("Steps")
-	plt.ylabel("Episode reward (mean)")
-	plt.title(title)
+	plt.ylabel("Episode reward")
 	plt.grid(True, linestyle=":", alpha=0.5)
 	plt.legend()
 	plt.tight_layout()
 
 	if output:
 		os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
-		plt.savefig(output, dpi=150)
+		plt.savefig(output)
 	if show:
 		# Switch to a GUI backend if available; if not, this will no-op in Agg
 		try:
