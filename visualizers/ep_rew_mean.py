@@ -173,7 +173,7 @@ def main():
 	parser.add_argument(
 		"--output",
 		type=str,
-		default=os.path.join("plots", "ep_rew_mean.png"),
+		default=os.path.join("plots", "ep_rew_mean.pdf"),
 		help="Path to save the plot image",
 	)
 	parser.add_argument("--show", action="store_true", help="Display the plot window")
