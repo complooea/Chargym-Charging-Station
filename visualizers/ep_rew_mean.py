@@ -131,6 +131,8 @@ def plot_bands(
 	title: str,
 	output: Optional[str],
 	show: bool,
+	annotate_step: Optional[float] = None,
+	annotate_label: Optional[str] = None,
 ):
 	# Figure size: width = 3.487 inches, height = width * 0.5
 	_width_in = 3.487
@@ -146,6 +148,28 @@ def plot_bands(
 	plt.xlabel("Steps")
 	plt.ylabel("Episode reward")
 	plt.grid(True, linestyle=":", alpha=0.5)
+
+
+	# Optional red marker to indicate a specific step on the median curve
+	if annotate_step is not None and grid.size > 0:
+		# Find the nearest grid index to the requested step
+		idx = int(np.argmin(np.abs(grid - float(annotate_step))))
+		x_val = grid[idx]
+		y_val = median[idx]
+		if not (np.isnan(x_val) or np.isnan(y_val)):
+			label = annotate_label if annotate_label is not None else f"selected agent ({int(annotate_step):,})"
+			plt.scatter(
+				x_val,
+				y_val,
+				color="#f74d4d",
+				s=8,
+				zorder=5,
+				linewidths=0.3,
+				edgecolors="white",
+				label=label,
+			)
+
+	# Place legend after plotting all artists so the marker label shows up
 	plt.legend()
 	plt.tight_layout()
 
@@ -189,6 +213,12 @@ def main():
 	)
 	parser.add_argument("--show", action="store_true", help="Display the plot window")
 	parser.add_argument("--dry-run", action="store_true", help="Only print discovery info and exit")
+	parser.add_argument(
+		"--mark-step",
+		type=float,
+		default=980000,
+		help="If set, mark this step on the median curve with a red dot (default: 980000)",
+	)
 	args = parser.parse_args()
 
 	run_dirs = find_run_dirs(args.logs_dir)
@@ -233,7 +263,19 @@ def main():
 	median, q1, q3, data_min, data_max = compute_band_stats(curves)
 
 	title = "DDPG: ep_rew_mean vs steps"
-	plot_bands(grid, median, q1, q3, data_min, data_max, title, args.output, args.show)
+	plot_bands(
+		grid,
+		median,
+		q1,
+		q3,
+		data_min,
+		data_max,
+		title,
+		args.output,
+		args.show,
+		annotate_step=args.mark_step,
+		annotate_label="Chosen Agent",
+	)
 
 	print(
 		f"Saved plot with {curves.shape[0]} runs and {curves.shape[1]} points to: {args.output}"
