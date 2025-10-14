@@ -274,7 +274,7 @@ def main():
 		args.output,
 		args.show,
 		annotate_step=args.mark_step,
-		annotate_label="Chosen Agent",
+		annotate_label="chosen agent",
 	)
 
 	print(
