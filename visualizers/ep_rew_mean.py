@@ -136,7 +136,7 @@ def plot_bands(
 ):
 	# Figure size: width = 3.487 inches, height = width * 0.5
 	_width_in = 3.487
-	_height_in = _width_in * 0.5
+	_height_in = _width_in * 0.42
 	plt.figure(figsize=(_width_in, _height_in))
 	# Min-Max band
 	plt.fill_between(grid, data_min, data_max, color="#0c84c6", edgecolor='none', alpha=0.16, label="min–max")
