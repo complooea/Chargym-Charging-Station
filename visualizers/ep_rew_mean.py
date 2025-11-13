@@ -139,11 +139,11 @@ def plot_bands(
 	_height_in = _width_in * 0.42
 	plt.figure(figsize=(_width_in, _height_in))
 	# Min-Max band
-	plt.fill_between(grid, data_min, data_max, color="#0c84c6", edgecolor='none', alpha=0.16, label="min–max")
+	plt.fill_between(grid, data_min, data_max, color="#0c84c6", edgecolor='none', alpha=0.16, label="Min–max")
 	# IQR band
 	plt.fill_between(grid, q1, q3, color="#0c84c6", edgecolor='none', alpha=0.4, label="25–75%")
 	# Median line
-	plt.plot(grid, median, color="#0c84c6", linewidth=0.5, label="median")
+	plt.plot(grid, median, color="#0c84c6", linewidth=0.5, label="Median")
 
 	plt.xlabel("Steps")
 	plt.ylabel("Episode reward")
@@ -274,7 +274,7 @@ def main():
 		args.output,
 		args.show,
 		annotate_step=args.mark_step,
-		annotate_label="chosen agent",
+		annotate_label="Chosen agent",
 	)
 
 	print(
