@@ -125,7 +125,12 @@ def load_validation_stats(
 	val_npz: str,
 	min_seeds: int,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-	"""Load validation NPZ and compute aggregate bands across seeds."""
+	"""Load validation NPZ and compute aggregate bands.
+
+	If available, uses per-episode rewards (`rewards`: [seed, step, episode])
+	to compute wider/more informative uncertainty bands. Falls back to
+	`episode_mean_rewards` ([seed, step]) when per-episode data is unavailable.
+	"""
 	if min_seeds <= 0:
 		raise ValueError("--val-min-seeds must be positive.")
 
@@ -150,9 +155,20 @@ def load_validation_stats(
 			f"Mismatched shapes: len(steps)={steps.shape[0]} but episode_mean_rewards.shape={seed_step_values.shape}."
 		)
 
+	# Prefer per-episode rewards to avoid overly collapsed bands from per-seed means.
+	if "rewards" in data:
+		rewards = np.asarray(data["rewards"], dtype=float)
+		if rewards.ndim == 3 and rewards.shape[1] == steps.shape[0]:
+			# [seed, step, episode] -> [samples=(seed*episode), step]
+			samples = np.transpose(rewards, (0, 2, 1)).reshape(-1, steps.shape[0])
+		else:
+			samples = seed_step_values
+	else:
+		samples = seed_step_values
+
 	support = np.sum(~np.isnan(seed_step_values), axis=0)
 	valid_mask = support >= int(min_seeds)
-	masked_values = seed_step_values.copy()
+	masked_values = samples.copy()
 	masked_values[:, ~valid_mask] = np.nan
 
 	val_median, val_q1, val_q3, val_min, val_max = compute_band_stats(masked_values)
