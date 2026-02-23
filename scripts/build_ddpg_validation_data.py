@@ -1,4 +1,5 @@
 import argparse
+import copy
 import glob
 import os
 import re
@@ -67,8 +68,8 @@ def discover_seed_checkpoints(models_dir: str, seed_glob: str, timestamp: str) -
     return seeds
 
 
-def evaluate_episode(env: gym.Env, model: DDPG, reset_flag: int, deterministic: bool) -> float:
-    obs = env.reset(reset_flag=reset_flag)
+def rollout_episode_from_obs(env: gym.Env, model: DDPG, obs: np.ndarray, deterministic: bool) -> float:
+    """Roll out one full episode starting from a provided initial observation."""
     done = False
     total_reward = 0.0
     while not done:
@@ -111,21 +112,34 @@ def evaluate_seed(
         return rewards
 
     for ep in range(episodes):
+        # Start a new day once, snapshot env internals, and replay that exact day for every checkpoint.
+        first_obs = env.reset(reset_flag=0)
+        base_invalues = copy.deepcopy(env.Invalues)
+        base_energy = copy.deepcopy(env.Energy)
+
         first_step, first_model = loaded_models[0]
         first_idx = step_to_idx[first_step]
-        rewards[first_idx, ep] = evaluate_episode(
+        rewards[first_idx, ep] = rollout_episode_from_obs(
             env=env,
             model=first_model,
-            reset_flag=0,
+            obs=first_obs,
             deterministic=deterministic,
         )
 
         for step, model in loaded_models[1:]:
+            # Restore same day without relying on reset_flag=1 MAT reload path.
+            env.timestep = 0
+            env.day = 1
+            env.done = False
+            env.Invalues = copy.deepcopy(base_invalues)
+            env.Energy = copy.deepcopy(base_energy)
+            obs = env.get_obs()
+
             idx = step_to_idx[step]
-            rewards[idx, ep] = evaluate_episode(
+            rewards[idx, ep] = rollout_episode_from_obs(
                 env=env,
                 model=model,
-                reset_flag=1,
+                obs=obs,
                 deterministic=deterministic,
             )
 
