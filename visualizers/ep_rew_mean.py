@@ -121,6 +121,44 @@ def compute_band_stats(curves: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.n
 	return median, q1, q3, data_min, data_max
 
 
+def load_validation_stats(
+	val_npz: str,
+	min_seeds: int,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+	"""Load validation NPZ and compute aggregate bands across seeds."""
+	if min_seeds <= 0:
+		raise ValueError("--val-min-seeds must be positive.")
+
+	try:
+		data = np.load(val_npz, allow_pickle=False)
+	except Exception as exc:
+		raise RuntimeError(f"Failed to load validation NPZ '{val_npz}': {exc}") from exc
+
+	if "steps" not in data or "episode_mean_rewards" not in data:
+		raise RuntimeError(
+			f"Validation NPZ '{val_npz}' must contain 'steps' and 'episode_mean_rewards'."
+		)
+
+	steps = np.asarray(data["steps"], dtype=float).reshape(-1)
+	seed_step_values = np.asarray(data["episode_mean_rewards"], dtype=float)
+	if seed_step_values.ndim != 2:
+		raise RuntimeError(
+			f"'episode_mean_rewards' must be 2D [num_seeds, num_steps], got shape {seed_step_values.shape}."
+		)
+	if seed_step_values.shape[1] != steps.shape[0]:
+		raise RuntimeError(
+			f"Mismatched shapes: len(steps)={steps.shape[0]} but episode_mean_rewards.shape={seed_step_values.shape}."
+		)
+
+	support = np.sum(~np.isnan(seed_step_values), axis=0)
+	valid_mask = support >= int(min_seeds)
+	masked_values = seed_step_values.copy()
+	masked_values[:, ~valid_mask] = np.nan
+
+	val_median, val_q1, val_q3, val_min, val_max = compute_band_stats(masked_values)
+	return steps, val_median, val_q1, val_q3, val_min, val_max
+
+
 def plot_bands(
 	grid: np.ndarray,
 	median: np.ndarray,
@@ -133,6 +171,12 @@ def plot_bands(
 	show: bool,
 	annotate_step: Optional[float] = None,
 	annotate_label: Optional[str] = None,
+	val_grid: Optional[np.ndarray] = None,
+	val_median: Optional[np.ndarray] = None,
+	val_q1: Optional[np.ndarray] = None,
+	val_q3: Optional[np.ndarray] = None,
+	val_min: Optional[np.ndarray] = None,
+	val_max: Optional[np.ndarray] = None,
 ):
 	# Figure size: width = 3.487 inches, height = width * 0.5
 	_width_in = 3.487
@@ -144,6 +188,23 @@ def plot_bands(
 	plt.fill_between(grid, q1, q3, color="#0c84c6", edgecolor='none', alpha=0.4, label="25–75%")
 	# Median line
 	plt.plot(grid, median, color="#0c84c6", linewidth=0.5, label="Median")
+
+	# Optional validation overlay (post-hoc from checkpoints)
+	if (
+		val_grid is not None
+		and val_median is not None
+		and val_q1 is not None
+		and val_q3 is not None
+		and val_min is not None
+		and val_max is not None
+	):
+		plt.fill_between(
+			val_grid, val_min, val_max, color="#f7941d", edgecolor='none', alpha=0.12, label="Validation min–max"
+		)
+		plt.fill_between(
+			val_grid, val_q1, val_q3, color="#f7941d", edgecolor='none', alpha=0.26, label="Validation 25–75%"
+		)
+		plt.plot(val_grid, val_median, color="#f7941d", linewidth=0.5, label="Validation median")
 
 	plt.xlabel("Steps")
 	plt.ylabel("Episode reward")
@@ -206,6 +267,18 @@ def main():
 		help="Number of step points for interpolation grid",
 	)
 	parser.add_argument(
+		"--val-npz",
+		type=str,
+		default="",
+		help="Optional NPZ created by scripts/build_ddpg_validation_data.py for validation overlay",
+	)
+	parser.add_argument(
+		"--val-min-seeds",
+		type=int,
+		default=1,
+		help="Minimum number of supporting seeds required per validation step (default: 1)",
+	)
+	parser.add_argument(
 		"--output",
 		type=str,
 		default=os.path.join("plots", "ep_rew_mean.pdf"),
@@ -262,6 +335,18 @@ def main():
 
 	median, q1, q3, data_min, data_max = compute_band_stats(curves)
 
+	val_grid = None
+	val_median = None
+	val_q1 = None
+	val_q3 = None
+	val_min = None
+	val_max = None
+	if args.val_npz:
+		val_grid, val_median, val_q1, val_q3, val_min, val_max = load_validation_stats(
+			args.val_npz,
+			args.val_min_seeds,
+		)
+
 	title = "DDPG: ep_rew_mean vs steps"
 	plot_bands(
 		grid,
@@ -275,6 +360,12 @@ def main():
 		args.show,
 		annotate_step=args.mark_step,
 		annotate_label="Chosen agent",
+		val_grid=val_grid,
+		val_median=val_median,
+		val_q1=val_q1,
+		val_q3=val_q3,
+		val_min=val_min,
+		val_max=val_max,
 	)
 
 	print(
@@ -284,4 +375,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-
