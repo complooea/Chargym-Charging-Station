@@ -112,28 +112,22 @@ def evaluate_seed(
         return rewards
 
     for ep in range(episodes):
-        # Start a new day once, snapshot env internals, and replay that exact day for every checkpoint.
-        first_obs = env.reset(reset_flag=0)
-        base_invalues = copy.deepcopy(env.Invalues)
-        base_energy = copy.deepcopy(env.Energy)
+        # Create one base day per episode, then replay that exact day for every checkpoint.
+        env.reset(reset_flag=0)
+        raw_env = env.unwrapped
+        base_invalues = copy.deepcopy(raw_env.Invalues)
+        base_energy = copy.deepcopy(raw_env.Energy)
 
-        first_step, first_model = loaded_models[0]
-        first_idx = step_to_idx[first_step]
-        rewards[first_idx, ep] = rollout_episode_from_obs(
-            env=env,
-            model=first_model,
-            obs=first_obs,
-            deterministic=deterministic,
-        )
-
-        for step, model in loaded_models[1:]:
-            # Restore same day without relying on reset_flag=1 MAT reload path.
-            env.timestep = 0
-            env.day = 1
-            env.done = False
-            env.Invalues = copy.deepcopy(base_invalues)
-            env.Energy = copy.deepcopy(base_energy)
-            obs = env.get_obs()
+        for step, model in loaded_models:
+            # Always call reset to keep wrapper state (e.g., TimeLimit counters) in sync.
+            env.reset(reset_flag=0)
+            raw_env = env.unwrapped
+            raw_env.timestep = 0
+            raw_env.day = 1
+            raw_env.done = False
+            raw_env.Invalues = copy.deepcopy(base_invalues)
+            raw_env.Energy = copy.deepcopy(base_energy)
+            obs = raw_env.get_obs()
 
             idx = step_to_idx[step]
             rewards[idx, ep] = rollout_episode_from_obs(
