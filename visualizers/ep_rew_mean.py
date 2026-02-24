@@ -194,16 +194,16 @@ def plot_bands(
 	val_min: Optional[np.ndarray] = None,
 	val_max: Optional[np.ndarray] = None,
 ):
-	# Figure size: width = 3.487 inches, height = width * 0.5
+	# Figure size: increase canvas to avoid legend/axes crowding.
 	_width_in = 3.487
-	_height_in = _width_in * 0.42
+	_height_in = _width_in * 0.6
 	plt.figure(figsize=(_width_in, _height_in))
 	# Min-Max band
-	plt.fill_between(grid, data_min, data_max, color="#0c84c6", edgecolor='none', alpha=0.16, label="Min–max")
+	plt.fill_between(grid, data_min, data_max, color="#0c84c6", edgecolor='none', alpha=0.16, label="Training min–max")
 	# IQR band
-	plt.fill_between(grid, q1, q3, color="#0c84c6", edgecolor='none', alpha=0.4, label="25–75%")
+	plt.fill_between(grid, q1, q3, color="#0c84c6", edgecolor='none', alpha=0.4, label="Training 25–75%")
 	# Median line
-	plt.plot(grid, median, color="#0c84c6", linewidth=0.5, label="Median")
+	plt.plot(grid, median, color="#0c84c6", linewidth=0.5, label="Training median")
 
 	# Optional validation overlay (post-hoc from checkpoints)
 	if (
@@ -215,16 +215,29 @@ def plot_bands(
 		and val_max is not None
 	):
 		plt.fill_between(
-			val_grid, val_min, val_max, color="#f7941d", edgecolor='none', alpha=0.12, label="Validation min–max"
+			val_grid, val_min, val_max, color="#f74d4d", edgecolor='none', alpha=0.16, label="Validation min–max"
 		)
 		plt.fill_between(
-			val_grid, val_q1, val_q3, color="#f7941d", edgecolor='none', alpha=0.26, label="Validation 25–75%"
+			val_grid, val_q1, val_q3, color="#f74d4d", edgecolor='none', alpha=0.4, label="Validation 25–75%"
 		)
-		plt.plot(val_grid, val_median, color="#f7941d", linewidth=0.5, label="Validation median")
+		plt.plot(val_grid, val_median, color="#f74d4d", linewidth=0.5, label="Validation median")
 
 	plt.xlabel("Steps")
 	plt.ylabel("Episode reward")
 	plt.grid(True, linestyle=":", alpha=0.5)
+
+	# Tighten y-range around interquartile structure to reduce unused blank space.
+	y_components = [q1, q3]
+	if val_q1 is not None and val_q3 is not None:
+		y_components.extend([val_q1, val_q3])
+	y_core = np.concatenate([np.asarray(c, dtype=float).ravel() for c in y_components])
+	y_core = y_core[np.isfinite(y_core)]
+	if y_core.size > 1:
+		y_low = float(np.nanpercentile(y_core, 1))
+		y_high = float(np.nanpercentile(y_core, 99))
+		if y_high > y_low:
+			pad = max(1.0, 0.08 * (y_high - y_low))
+			plt.ylim(y_low - pad, y_high + pad)
 
 
 	# Optional red marker to indicate a specific step on the median curve
@@ -234,7 +247,6 @@ def plot_bands(
 		x_val = grid[idx]
 		y_val = median[idx]
 		if not (np.isnan(x_val) or np.isnan(y_val)):
-			label = annotate_label if annotate_label is not None else f"selected agent ({int(annotate_step):,})"
 			plt.scatter(
 				x_val,
 				y_val,
@@ -243,16 +255,35 @@ def plot_bands(
 				zorder=5,
 				linewidths=0.3,
 				edgecolors="white",
-				label=label,
+				label="_nolegend_",
 			)
 
 	# Place legend after plotting all artists so the marker label shows up
-	plt.legend()
-	plt.tight_layout()
+	handles, labels = plt.gca().get_legend_handles_labels()
+	label_to_handle = {lab: h for h, lab in zip(handles, labels)}
+	ordered_labels = [
+		"Training min–max",
+		"Training 25–75%",
+		"Training median",
+		"Validation min–max",
+		"Validation 25–75%",
+		"Validation median",
+	]
+	ordered_handles = [label_to_handle[lab] for lab in ordered_labels if lab in label_to_handle]
+	fig = plt.gcf()
+	fig.legend(
+		ordered_handles,
+		[lab for lab in ordered_labels if lab in label_to_handle],
+		loc="upper center",
+		bbox_to_anchor=(0.55, 1.02),
+		ncol=2,
+		frameon=True,
+	)
+	plt.tight_layout(rect=(0, 0, 1, 0.80))
 
 	if output:
 		os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
-		plt.savefig(output)
+		plt.savefig(output, bbox_inches="tight")
 	if show:
 		# Switch to a GUI backend if available; if not, this will no-op in Agg
 		try:
