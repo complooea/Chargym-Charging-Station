@@ -16,7 +16,12 @@ At each timestep `t` the agent observes a vector of dimension `8 + 2*N_cars = 28
 |---|---|---|
 | `[0]` | Current solar radiation | `Radiation[t] / 1000` |
 | `[1]` | Current electricity price | `Price[t] / 0.1` |
-| `[2:8]` | 3-step-ahead predictions of radiation and price (interleaved) | same as above |
+| `[2]` | Solar radiation at `t+1` | `Radiation[t+1] / 1000` |
+| `[3]` | Solar radiation at `t+2` | `Radiation[t+2] / 1000` |
+| `[4]` | Solar radiation at `t+3` | `Radiation[t+3] / 1000` |
+| `[5]` | Electricity price at `t+1` | `Price[t+1] / 0.1` |
+| `[6]` | Electricity price at `t+2` | `Price[t+2] / 0.1` |
+| `[7]` | Electricity price at `t+3` | `Price[t+3] / 0.1` |
 | `[8:18]` | Battery SOC of each car (`Battery[car]`) | raw value in [0, 1] |
 | `[18:28]` | Normalised time-to-departure of each car (`Departure_hour[car] / 24`) | [0, 1] |
 
