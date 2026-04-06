@@ -148,10 +148,18 @@ kW and kWh coincide numerically).
 ### 4.2 When a car is absent (`present_cars[car, t] == 0`)
 
 `P_charging[car]` is forced to 0 regardless of the action, and
-**`BOC[car, t+1]` is not written** -- it retains whatever value was last stored
-in that column. In practice, for a car that has not yet arrived,
-`BOC[car, 0..t]` are all 0 (initialised by `np.zeros`). After departure, the
-SOC freezes at the last value it had when present.
+**`BOC[car, t+1]` is not written**. Because `BOC` is initialised with
+`np.zeros`, any column that is never written stays at 0.
+
+Concretely, if a car departs at hour `d` with SOC 0.8:
+
+- At `t = d-1` (last present step): action writes `BOC[car, d] = 0.8`.
+- At `t = d` (first absent step): observation reads `BOC[car, d] = 0.8`, but
+  no write to `BOC[car, d+1]` occurs, so it remains 0 (from `np.zeros`).
+- At `t = d+1` onward: observation reads `BOC[car, d+1] = 0`.
+
+**The SOC persists for one timestep after departure, then drops to 0.**
+Before the first arrival, SOC is likewise 0.
 
 ### 4.3 When a car arrives
 
@@ -176,10 +184,11 @@ freezes and the action has no further effect.
 
 | Event | SOC behaviour |
 |---|---|
-| Before first arrival | `BOC = 0` (uninitialised) |
+| Before first arrival | `BOC = 0` (from `np.zeros` init) |
 | On arrival at hour `h` | `BOC[car, h]` set to sampled value in [0.20, 0.49] |
 | While present | `BOC[car, t+1] = BOC[car, t] + a[car] * max_energy / 30` |
-| While absent (after departure) | `BOC` frozen at last present value |
+| Departure hour `d` (first absent step) | `BOC[car, d]` still holds the last written value (e.g. 0.8) |
+| `d+1` onward | `BOC[car, d+1..] = 0` (never written, stays at `np.zeros` init) |
 
 ---
 
